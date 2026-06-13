@@ -9,14 +9,20 @@ def init_firebase():
     else:
         firebase_json = os.getenv("FIREBASE_JSON")
         if not firebase_json:
-            raise ValueError("FIREBASE_JSON not set!")
-        cred = credentials.Certificate(json.loads(firebase_json.strip()))
+            raise ValueError("FIREBASE_JSON environment variable not set!")
+        firebase_json = firebase_json.strip()
+        try:
+            cred = credentials.Certificate(json.loads(firebase_json))
+        except Exception as e:
+            raise ValueError(f"FIREBASE_JSON parse error: {e}")
 
     firebase_url = os.getenv("FIREBASE_URL", "").strip()
     if not firebase_url:
-        raise ValueError("FIREBASE_URL not set!")
+        raise ValueError("FIREBASE_URL environment variable not set!")
 
-    firebase_admin.initialize_app(cred, {'databaseURL': firebase_url})
+    firebase_admin.initialize_app(cred, {
+        'databaseURL': firebase_url
+    })
     print(f"Firebase connected: {firebase_url}")
 
 init_firebase()
@@ -51,13 +57,4 @@ class FirebaseService:
 
     def clear_chat_history(self, user_id):
         db.reference(f'chats/{user_id}').delete()
-
-    def save_product(self, name, price, description, photo_id=None):
-        db.reference('products').push({
-            'name': name,
-            'price': price,
-            'description': description,
-            'photo_id': photo_id or '',
-            'active': True
-        })
-                                             
+        
