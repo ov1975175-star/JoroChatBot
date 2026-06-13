@@ -3,14 +3,29 @@ import json
 import firebase_admin
 from firebase_admin import credentials, db
 
-if os.path.exists("serviceAccountKey.json"):
-    cred = credentials.Certificate("serviceAccountKey.json")
-else:
-    cred = credentials.Certificate(json.loads(os.getenv("FIREBASE_JSON")))
+def init_firebase():
+    if os.path.exists("serviceAccountKey.json"):
+        cred = credentials.Certificate("serviceAccountKey.json")
+    else:
+        firebase_json = os.getenv("FIREBASE_JSON")
+        if not firebase_json:
+            raise ValueError("FIREBASE_JSON environment variable not set!")
+        firebase_json = firebase_json.strip()
+        try:
+            cred = credentials.Certificate(json.loads(firebase_json))
+        except Exception as e:
+            raise ValueError(f"FIREBASE_JSON parse error: {e}")
 
-firebase_admin.initialize_app(cred, {
-    'databaseURL': os.getenv("FIREBASE_URL", "https://your-project-default-rtdb.firebaseio.com")
-})
+    firebase_url = os.getenv("FIREBASE_URL", "").strip()
+    if not firebase_url:
+        raise ValueError("FIREBASE_URL environment variable not set!")
+
+    firebase_admin.initialize_app(cred, {
+        'databaseURL': firebase_url
+    })
+    print(f"Firebase connected: {firebase_url}")
+
+init_firebase()
 
 class FirebaseService:
 
@@ -42,3 +57,4 @@ class FirebaseService:
 
     def clear_chat_history(self, user_id):
         db.reference(f'chats/{user_id}').delete()
+        
